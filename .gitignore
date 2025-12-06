@@ -1,0 +1,37 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+env/
+venv/
+*.egg-info/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# GCP Service Account Keys (NEVER COMMIT)
+*.json
+
+# Byte-compiled
+*.DS_Store
+
+# Output folders
+dist/
+build/

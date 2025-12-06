@@ -1,7 +1,9 @@
 # Terraform
-*.tfstate
-*.tfstate.*
 .terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*
+terraform.tfvars
 .terraform.lock.hcl
 crash.log
 override.tf
@@ -29,35 +31,9 @@ venv/
 # GCP Service Account Keys (NEVER COMMIT)
 *.json
 
-# Byte-compiled
+# OS / System files
 *.DS_Store
 
 # Output folders
 dist/
 build/
-
-.gcp-infra/.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-terraform.tfvars
-.terraform.lock.hcl
-
-.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-terraform.tfvars
-.terraform.lock.hcl
-
-.terraform/
-*.tfstate
-*.tfstate.backup

@@ -48,3 +48,29 @@ variable "table_schema" {
   description = "Schema for BigQuery table (JSON string)"
   type        = string
 }
+
+
+variable "composer_env_name" {
+  description = "Composer environment name"
+  type        = string
+}
+
+variable "composer_region" {
+  description = "Region for Composer environment"
+  type        = string
+}
+
+variable "composer_sa" {
+  description = "Service account for Composer node config"
+  type        = string
+}
+
+variable "composer_image" {
+  description = "Composer image version"
+  type        = string
+}
+
+variable "location" {
+  type        = string
+  description = "Optional location variable"
+}

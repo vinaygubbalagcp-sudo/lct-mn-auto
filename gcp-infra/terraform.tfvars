@@ -15,3 +15,9 @@ table_schema = <<EOF
   {"name": "created_date", "type": "DATE", "mode": "NULLABLE"}
 ]
 EOF
+
+
+composer_env_name = "lct-mn-auto-env-d"
+composer_region   = "us-central1"
+composer_sa       = "gsheet-gcs-bq@lvc-tc-mn-d.iam.gserviceaccount.com"
+composer_image    = "composer-3-airflow-2.10.5-build.19"

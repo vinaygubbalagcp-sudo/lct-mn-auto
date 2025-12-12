@@ -12,8 +12,7 @@ def extract_data_from_google_sheets(sheet_id, sheet_name, creds_json):
 
     # Authenticate the service account
     creds = ServiceAccountCredentials.from_json_keyfile_name(creds_json, scope)
-    client = gspread.authorize(creds)
-
+    client = gspread.authorize(creds)  # 
     # Open the Google Sheet using Sheet ID (correct)
     sheet = client.open_by_key(sheet_id).worksheet(sheet_name)
 

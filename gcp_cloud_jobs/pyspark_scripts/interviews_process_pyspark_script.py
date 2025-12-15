@@ -40,10 +40,45 @@ def validations():
     trimmed_df = df.select([trim(col(c)).alias(c) for c in df.columns])
     # list comprehension 
     trimmed_df.show()
+
+    ######################################
+    #RENAMING ONE COLUMN OR MORE COLUMNS
+    #####################################
+    # data analysts - bi team 
+
+    new_df = (df.withColumnRenamed("Timestamp", "inserted_ts")
+            .withColumnRenamed("Name", "interview_candidate_name")
+            .withColumnRenamed("Email", "email"))
+    new_df.printSchema()
+    ######################################
+    #RENAMING ONE COLUMN OR MORE COLUMNS
+    #####################################
+    # data analysts - bi team 
+    # mapping is always done with dictionaries [stm is taken place using dictionaries]
+    # dicitonary 
+    # for loop 
+
+    dict_for_renaming_columns = {
+    "Timestamp" : "inserted_ts",
+    "Name" : "interview_candidate_name",
+    "Email" : "email",
+    "Contact Number" : "contact_number",
+    "Interview Date" : "interview_date",
+    "Interview Time" : "interview_time",
+    "Interview Duration" : "interview_duration",
+    "Company Name" : "company_name",
+    "Interview Details" : "interview_details",
+    "Email Address" : "email_address"
+    }
+
+    for old_name, new_name in dict_for_renaming_columns.items():
+        new_df = trimmed_df.withTypeInfo(old_name, new_name)
+
+    new_df.printSchema()
     ######################################################
     # WRINTING IT TO BIGQUERY
     ######################################################
-    trimmed_df.write \
+    new_df.write \
     .format("bigquery") \
     .option("table",'alpine-guild-477901-v6.first_dataset.interveiws') \
     .option("temporaryGcsBucket","gs://lvc-tc-mn-d-bckt/interviews_scheduled_folder/temp") \

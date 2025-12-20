@@ -1,10 +1,22 @@
+# i need to connect to secret manger to get my credentials to coonect to google sheet and create a pandas dadataframe
+import datetime
+from google.cloud import secretmanager
+import google_crc32c
+import json
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-from datetime import datetime
+from datetime import datetime 
+import gspread  
 import smtplib
 from google.cloud import bigquery
+from google.oauth2.service_account import Credentials 
 
+# -------------------------------------------------
+# GOOGLE SHEET DETAILS
+# -------------------------------------------------
+SHEET_ID = "18LJ0dh7W8u698vPsB6Ew6xOgDONPynYcYE0SU6UzbiU"
+
+GIVERS_WORKSHEET = "Candidate_Availability"
+TAKERS_WORKSHEET = "Panel_Availability"
 
 # -------------------------------------------------
 # BIGQUERY CONFIG
@@ -16,55 +28,97 @@ TABLE_ID = "scheduled_interviews"    # target table
 # -------------------------------------------------
 # EMAIL CONFIG
 # -------------------------------------------------
-SENDER_EMAIL = "letsmailrahul27@gmail.com"
-SENDER_PASSWORD = "pkpd oqsi sfjj iwyo"
+# SENDER_EMAIL = "letsmailrahul27@gmail.com"
+# SENDER_PASSWORD = "pkpd oqsi sfjj iwyo"
 
-# -------------------------------------------------
-# SERVICE ACCOUNT CONFIG
-# -------------------------------------------------
-SERVICE_ACCOUNT_FILE = r"C:\lct-dm-p\lct-mn-auto\gcp-source\secrets\service_account_credentials.json"
+def get_values_in_secrets(project_id, secret_id, version_id="latest"):
+    # Create the Secret Manager client
+    client = secretmanager.SecretManagerServiceClient()
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
+    # Build secret version name
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
 
-# -------------------------------------------------
-# GOOGLE SHEET DETAILS
-# -------------------------------------------------
-SHEET_ID = "18LJ0dh7W8u698vPsB6Ew6xOgDONPynYcYE0SU6UzbiU"
+    # Access the secret
+    response = client.access_secret_version(request={"name": name})
 
-GIVERS_WORKSHEET = "Candidate_Availability"
-TAKERS_WORKSHEET = "Panel_Availability"
+    # Verify payload checksum
+    crc32c = google_crc32c.Checksum()
+    crc32c.update(response.payload.data)
 
-# -------------------------------------------------
-# AUTHENTICATED SHEET READ
-# -------------------------------------------------
-def read_google_sheet(sheet_id, worksheet_name):
-    creds = Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE,
-        scopes=SCOPES
+    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
+        raise ValueError("Data corruption detected")
+
+    # Decode secret payload
+    payload = response.payload.data.decode("UTF-8") 
+    return payload
+
+def get_service_account_email(project_id, secret_id, version_id="latest"):
+    # Create the Secret Manager client
+    client = secretmanager.SecretManagerServiceClient()
+
+    # Build secret version name
+    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+
+    # Access the secret
+    response = client.access_secret_version(request={"name": name})
+
+    # Verify payload checksum
+    crc32c = google_crc32c.Checksum()
+    crc32c.update(response.payload.data)
+
+    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
+        raise ValueError("Data corruption detected")
+
+    # Decode secret payload
+    payload = response.payload.data.decode("UTF-8")
+
+    # Convert JSON string to dict
+    sa_json = json.loads(payload)
+
+    # I dont require email printing i want to connect to google sheet using this json   
+    
+    sa_email = sa_json.get("client_email")
+
+    print("Service Account Email ID:", sa_email)
+
+    return sa_json
+# i need to create dataframes for two google sheets using this secret manager credentials
+# give the code to connect to google sheet and create pandas dataframe using this secret manager credentials
+def get_dataframe_from_google_sheet(project_id, secret_id, sheet_id, worksheet_name):
+    # Get service account credentials from Secret Manager
+    sa_json = get_service_account_email(project_id, secret_id)
+
+    # Create Credentials object
+    creds = Credentials.from_service_account_info(
+        sa_json,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
     )
 
+    # Authorize gspread client
     client = gspread.authorize(creds)
 
+    # Open the Google Sheet by ID and select the worksheet
     sheet = client.open_by_key(sheet_id)
     worksheet = sheet.worksheet(worksheet_name)
 
+    # Get all records and convert to DataFrame
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
 
-    # normalize column names
+    # Normalize column names
     df.columns = df.columns.str.strip().str.lower()
 
     return df
-
+# adjust the code as per the following function call 
 # -------------------------------------------------
 # READ & FILTER DATA
 # -------------------------------------------------
-def read_and_filter_data():
-    df1 = read_google_sheet(SHEET_ID, GIVERS_WORKSHEET)
-    df2 = read_google_sheet(SHEET_ID, TAKERS_WORKSHEET)
+def read_and_filter_data(project_id, secret_id, SHEET_ID, GIVERS_WORKSHEET, TAKERS_WORKSHEET):
+    df1 = get_dataframe_from_google_sheet(project_id, secret_id, SHEET_ID, GIVERS_WORKSHEET)
+    df2 = get_dataframe_from_google_sheet(project_id, secret_id, SHEET_ID, TAKERS_WORKSHEET)
 
     current_date = datetime.now().date()
 
@@ -88,7 +142,6 @@ def read_and_filter_data():
         df2[df2['date'] == current_date]
     )
 
-
 # -------------------------------------------------
 # MERGE
 # -------------------------------------------------
@@ -105,6 +158,9 @@ def mergefiltered_data(df1, df2):
 # EMAIL NOTIFICATION
 # -------------------------------------------------
 def send_email_notifications(merged_df):
+    project_id = "175579495168" 
+    SENDER_EMAIL = get_values_in_secrets(project_id, "SENDER_EMAIL")
+    SENDER_PASSWORD = get_values_in_secrets(project_id, "SENDER_PASSWORD")
     if merged_df.empty:
         print("No matching records found.")
         return 
@@ -191,13 +247,9 @@ def insert_into_bigquery(df):
 
     print(f"{len(df)} rows inserted into BigQuery table {table_ref} successfully.")
 
-
-# -------------------------------------------------
-# MAIN
-# -------------------------------------------------
-if __name__ == "__main__":
-    givers, takers = read_and_filter_data()
-    merged_df = mergefiltered_data(givers, takers)
-    send_email_notifications(merged_df)
-    insert_into_bigquery(merged_df)
-
+project_id = "175579495168"
+secret_id = "interviews_secret_sa"
+givers, takers = read_and_filter_data(project_id, secret_id, SHEET_ID, GIVERS_WORKSHEET, TAKERS_WORKSHEET)
+merged_df = mergefiltered_data(givers, takers)
+send_email_notifications(merged_df)
+insert_into_bigquery(merged_df)
